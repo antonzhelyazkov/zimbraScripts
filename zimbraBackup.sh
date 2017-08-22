@@ -1,8 +1,8 @@
 #!/bin/sh
 
 ftpHost=10.10.10.10
-ftpUser=test1
-ftpPass=qweqwe
+ftpUser=test    
+ftpPass=qweqweqwe
 
 verbose=1
 
@@ -17,13 +17,15 @@ keepLocalBackupDays=1
 localBackupDays=$(date +%Y%m%d%H%M%S -d "$keepLocalBackupDays day ago")
 
 keepRemoteCopy=1
-keepRemoteBackupDays=1
+keepRemoteBackupDays=0
 remoteBackupDays=$(date +%Y%m%d%H%M%S -d "$keepRemoteBackupDays day ago")
 
 zimbraUser="zimbra"
 zimbraZmprov="/opt/zimbra/bin/zmprov"
+zimbraZmmailbox="/opt/zimbra/bin/zmmailbox"
 
 zmprovCommand="/bin/sudo -u $zimbraUser $zimbraZmprov"
+zmmailboxCommand="/bin/sudo -u $zimbraUser $zimbraZmmailbox"
 curlBin="/bin/curl"
 lftpBin="/bin/lftp"
 
@@ -35,6 +37,7 @@ distributinlistMembersDir="$currentBackupDir/distributinlistMembers"
 userpassDir="$currentBackupDir/userpass"
 userdataDir="$currentBackupDir/userdata"
 filtersDir="$currentBackupDir/filters"
+mailDir="$currentBackupDir/mail"
 domainsFile="$currentBackupDir/domains.txt"
 adminsFile="$currentBackupDir/admins.txt"
 emailsFile="$currentBackupDir/emails.txt"
@@ -157,6 +160,7 @@ createDir $distributinlistMembersDir
 createDir $userpassDir
 createDir $userdataDir
 createDir $filtersDir
+createDir $mailDir
 
 logPrint "create distributinlists file $domainsFile" 0 0
 $zmprovCommand gad > $domainsFile
@@ -176,14 +180,14 @@ logPrint "create distributinlists file $emailsFile" 0 0
 $zmprovCommand -l gaa > $emailsFile
 checkStatusGAA=$?
 if [ $checkStatusGAA -ne 0 ]; then
-        logPrint "ERROR could not execute $zmprovCommand -l gaa > $emailsFile" 1 1
+        logPrint "ERROR could not execute $zmprovCommand -l gaa > $emailsFile" 1 0
 fi
 
 logPrint "create distributinlists file $distributinlistFile" 0 0
 $zmprovCommand gadl > $distributinlistFile
 checkStatusGADL=$?
 if [ $checkStatusGADL -ne 0 ]; then
-        logPrint "ERROR could not execute $zmprovCommand gadl > $distributinlistFile" 1 1
+        logPrint "ERROR could not execute $zmprovCommand gadl > $distributinlistFile" 1 0
 fi
 
 while read distributionLists
@@ -192,29 +196,29 @@ do
         $zmprovCommand gdlm $distributionLists > $distributinlistMembersDir/$distributionLists.txt
         checkStatusGDLM=$?
         if [ $checkStatusGDLM -ne 0 ]; then
-                logPrint "ERROR could not execute $zmprovCommand gdlm > $distributinlistMembersDir/$distributionLists.txt" 1 1
+                logPrint "ERROR could not execute $zmprovCommand gdlm > $distributinlistMembersDir/$distributionLists.txt" 1 0
         fi
 done < $distributinlistFile
 
-#while read email
-#do
-#       logPrint "get user password for $email" 0 0
-#       $zmprovCommand -l ga $email userPassword | grep userPassword: | awk '{ print $2}' > $userpassDir/$email.shadow;
-#       checkStatusGetUserPass=$?
-#       if [ $checkStatusGetUserPass -ne 0 ]; then
-#               logPrint "ERROR could not execute $zmprovCommand -l ga $email userPassword | grep userPassword: | awk \'{ print $2}\' > $userpassDir/$email.shadow" 1 1
-#       fi
-#done < $emailsFile
+while read email
+do
+        logPrint "get user password for $email" 0 0
+        $zmprovCommand -l ga $email userPassword | grep userPassword: | awk '{ print $2}' > $userpassDir/$email.shadow;
+        checkStatusGetUserPass=$?
+        if [ $checkStatusGetUserPass -ne 0 ]; then
+                logPrint "ERROR could not execute $zmprovCommand -l ga $email userPassword | grep userPassword: | awk \'{ print $2}\' > $userpassDir/$email.shadow" 1 0
+        fi
+done < $emailsFile
 
-#while read email
-#do
-#       logPrint "get user data for $email" 0 0
-#       $zmprovCommand ga $email | grep -i Name: > $userdataDir/$email
-#       checkStatusGetUserData=$?
-#        if [ $checkStatusGetUserData -ne 0 ]; then
-#                logPrint "ERROR could not execute $zmprovCommand ga $email | grep Name: > $userdataDir/$email" 1 1
-#        fi
-#done < $emailsFile
+while read email
+do
+        logPrint "get user data for $email" 0 0
+        $zmprovCommand ga $email | grep -i Name: > $userdataDir/$email
+        checkStatusGetUserData=$?
+        if [ $checkStatusGetUserData -ne 0 ]; then
+                logPrint "ERROR could not execute $zmprovCommand ga $email | grep Name: > $userdataDir/$email" 1 0
+        fi
+done < $emailsFile
 
 #while read email
 #do
@@ -223,6 +227,17 @@ done < $distributinlistFile
 #       sed -i -e "1d" $tmpDir/$email
 #       sed 's/zimbraMailSieveScript: //g' $tmpDir/$email > $filtersDir/$email
 #done < $emailsFile
+
+#for email in `cat /backups/zmigrate/emails.txt`; do  zmmailbox -z -m $i getRestURL '/?fmt=tgz' > $i.tgz ;  echo $email ; done
+while read email
+do
+        logPrint "get mail for $email" 0 0
+        $zmmailboxCommand -z -m $email getRestURL '/?fmt=tgz' > $mailDir/$email.tgz
+        checkGetMail=$?
+        if [ $checkGetMail -ne 0 ]; then
+                logPrint "ERROR could not execute $zmmailboxCommand -z -m $email getRestURL '/?fmt=tgz' > $mailDir/$email.tgz" 1 0
+        fi
+done < $emailsFile
 
 if [ $keepRemoteCopy -eq 1 ]; then
 
