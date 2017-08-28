@@ -22,6 +22,46 @@ zmmailboxCommand="sudo -u $zimbraUser $zmmailboxBin"
 
 ##############################################
 
+function usage() {
+
+echo "Usage: ./createUser.sh --restore=all"
+echo "Usage: ./createUser.sh --restore=test@exampe.com"
+echo "--restore         >>>>    restore email or all emails"
+exit 1
+
+}
+
+##############################################
+
+for i in "$@"
+do
+case $i in
+        --restore=*)
+        restore="${i#*=}"
+        shift # past argument=value
+        ;;
+
+        *)
+            # unknown option
+        ;;
+esac
+done
+
+emailRegex="^[a-z0-9!#\$%&'*+/=?^_\`{|}~-]+(\.[a-z0-9!#$%&'*+/=?^_\`{|}~-]+)*@([a-z0-9]([a-z0-9-]*[a-z0-9])?\.)+[a-z0-9]([a-z0-9-]*[a-z0-9])?\$"
+echo $restore
+
+if [[ $restore =~ $emailRegex ]] || [ $restore == "all" ]; then
+        echo "restore seems valid input $restore"
+else
+        echo "restore seems NOT valid input $restore"
+        usage
+fi
+
+if [[ -z $restore ]]; then
+        echo "ERROR: restore parameter is not set"
+        usage
+fi
+
 if [[ $EUID -ne 0 ]]; then
         echo "This script must be run as root. Current user $EUID"
         exit
@@ -39,9 +79,19 @@ if [ ! -d $distributinlistMembersDir ] || [ ! -d $userpassDir ] || [ ! -d $userd
         exit
 fi
 
-users="$currentBaseDir/emails.txt"
+if [ $restore == "all" ]; then
+        users="<$currentBaseDir/emails.txt"
+else
+        users=$restore
+        grep -qw $users $currentBaseDir/emails.txt
+        checkIfEmail=$?
+        if [ $checkIfEmail -ne 0 ]; then
+                echo "email $users does not exist in archive - $currentBaseDir/emails.txt"
+                exit
+        fi
+fi
 
-while read email
+for email in $users
 do
         $zmprovCommnand -l gaa | grep -q $email
         checkIfAccountExists=$?
@@ -78,4 +128,4 @@ do
                         echo "ERROR could not restore mail for $email"
                 fi
         fi
-done < $users
+done
