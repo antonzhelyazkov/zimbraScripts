@@ -1,16 +1,17 @@
 #!/bin/sh
 
 ftpHost=10.10.10.10
-ftpUser=test1
-ftpPass=qweqweqwe
+ftpUser=qwe
+ftpPass=qweqwe
 
 verbose=1
 
 dateTs=$(date +%s)
+ownScriptName=$(basename "$0" | sed -e 's/.sh$//g')
 hostname=$(hostname)
-scriptLog="/var/log/qwe.log"
-nagiosLog="/var/log/qweNagios.log"
-lastRun="/var/log/qwe.last"
+scriptLog="/var/log/$ownScriptName.log"
+nagiosLog="/var/log/$ownScriptName.nagios"
+lastRun="/var/log/$ownScriptName.last"
 
 keepLocalCopy=1
 keepLocalBackupDays=1
