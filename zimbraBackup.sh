@@ -1,8 +1,11 @@
 #!/bin/sh
 
 ftpHost=10.10.10.10
-ftpUser=qwe
+ftpUser=test1
 ftpPass=qweqwe
+# Speed is in bytes per second. 0 - means unlimited
+ftpUploadSpeed=5000000
+ftpDownloadSpeed=0
 
 verbose=1
 
@@ -18,7 +21,7 @@ keepLocalBackupDays=1
 localBackupDays=$(date +%Y%m%d%H%M%S -d "$keepLocalBackupDays day ago")
 
 keepRemoteCopy=1
-keepRemoteBackupDays=0
+keepRemoteBackupDays=2
 remoteBackupDays=$(date +%Y%m%d%H%M%S -d "$keepRemoteBackupDays day ago")
 
 zimbraUser="zimbra"
@@ -230,13 +233,13 @@ do
         fi
 done < $emailsFile
 
-while read email
-do
-        logPrint "get filter for $email" 0 0
-        $zmprovCommand ga $email zimbraMailSieveScript > $tmpDir/$email
-        sed -i -e "1d" $tmpDir/$email
-        sed 's/zimbraMailSieveScript: //g' $tmpDir/$email > $filtersDir/$email
-done < $emailsFile
+#while read email
+#do
+#       logPrint "get filter for $email" 0 0
+#       $zmprovCommand ga $email zimbraMailSieveScript > $tmpDir/$email
+#       sed -i -e "1d" $tmpDir/$email
+#       sed 's/zimbraMailSieveScript: //g' $tmpDir/$email > $filtersDir/$email
+#done < $emailsFile
 
 while read email
 do
@@ -388,7 +391,7 @@ chmod 755 $restoreCreateUsers
 
 if [ $keepRemoteCopy -eq 1 ]; then
 
-        $lftpBin -u $ftpUser:$ftpPass $ftpHost -e "mirror -R $currentBackupDir $hostname/; bye"
+        $lftpBin -u $ftpUser:$ftpPass $ftpHost -e "set net:connection-limit 1; set net:limit-rate $ftpDownloadSpeed:$ftpUploadSpeed; mirror -R $currentBackupDir $hostname/; bye"
         checkUploadExit=$?
         echo $checkUploadExit
         if [ $checkUploadExit -ne 0 ]; then
