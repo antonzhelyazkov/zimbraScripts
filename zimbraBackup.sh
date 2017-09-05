@@ -1,6 +1,6 @@
 #!/bin/sh
 ###############################
-# version 1.1
+# version 1.1.1
 # author Anton Antonov
 # antonisimo@gmail.com
 ###############################
