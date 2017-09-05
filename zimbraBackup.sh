@@ -5,6 +5,7 @@
 # antonisimo@gmail.com
 ###############################
 
+localBackupDir="/opt/backup"
 ftpHost=10.10.10.10
 ftpUser=qwe
 ftpPass=qweqwe
@@ -44,7 +45,6 @@ zmmailboxCommand="/bin/sudo -u $zimbraUser $zimbraZmmailbox"
 curlBin="/bin/curl"
 lftpBin="/bin/lftp"
 
-localBackupDir="/opt/backup"
 currentDate=$(date +%Y%m%d%H%M%S)
 currentBackupDir="$localBackupDir/$currentDate"
 tmpDir="$currentBackupDir/tmp"
