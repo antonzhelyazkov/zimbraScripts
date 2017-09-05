@@ -1,13 +1,13 @@
 #!/bin/sh
 
 ftpHost=10.10.10.10
-ftpUser=test1
+ftpUser=qwe
 ftpPass=qweqwe
 # Speed is in bytes per second. 0 - means unlimited
-ftpUploadSpeed=5000000
+ftpUploadSpeed=7500000
 ftpDownloadSpeed=0
 
-verbose=1
+verbose=0
 
 dateTs=$(date +%s)
 ownScriptName=$(basename "$0" | sed -e 's/.sh$//g')
@@ -33,7 +33,7 @@ zmmailboxCommand="/bin/sudo -u $zimbraUser $zimbraZmmailbox"
 curlBin="/bin/curl"
 lftpBin="/bin/lftp"
 
-localBackupDir="/opt/backup"
+localBackupDir="/mnt/backup"
 currentDate=$(date +%Y%m%d%H%M%S)
 currentBackupDir="$localBackupDir/$currentDate"
 tmpDir="$currentBackupDir/tmp"
@@ -233,13 +233,13 @@ do
         fi
 done < $emailsFile
 
-#while read email
-#do
-#       logPrint "get filter for $email" 0 0
-#       $zmprovCommand ga $email zimbraMailSieveScript > $tmpDir/$email
-#       sed -i -e "1d" $tmpDir/$email
-#       sed 's/zimbraMailSieveScript: //g' $tmpDir/$email > $filtersDir/$email
-#done < $emailsFile
+while read email
+do
+       logPrint "get filter for $email" 0 0
+       $zmprovCommand ga $email zimbraMailSieveScript > $tmpDir/$email
+       sed -i -e "1d" $tmpDir/$email
+       sed 's/zimbraMailSieveScript: //g' $tmpDir/$email > $filtersDir/$email
+done < $emailsFile
 
 while read email
 do
@@ -390,12 +390,14 @@ chmod 755 $restoreCreateUsers
 ############# restore scripts ##############
 
 if [ $keepRemoteCopy -eq 1 ]; then
-
+        logPrint "start ftp transfer" 0 0
         $lftpBin -u $ftpUser:$ftpPass $ftpHost -e "set net:connection-limit 1; set net:limit-rate $ftpDownloadSpeed:$ftpUploadSpeed; mirror -R $currentBackupDir $hostname/; bye"
         checkUploadExit=$?
         echo $checkUploadExit
         if [ $checkUploadExit -ne 0 ]; then
                 logPrint "ERROR in upload" 1 1
+        else
+                logPrint "ftp transfer finished successfully" 0 0
         fi
 
         for currentRemoteDirectory in $($curlBin -s -u $ftpUser:$ftpPass ftp://$ftpHost/$hostname/ -X MLSD | grep 'type=dir' | cut -d';' -f8)
