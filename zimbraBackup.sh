@@ -1,13 +1,28 @@
 #!/bin/sh
+###############################
+# version 1.1
+# author Anton Antonov
+# antonisimo@gmail.com
+###############################
 
 ftpHost=10.10.10.10
 ftpUser=qwe
 ftpPass=qweqwe
 # Speed is in bytes per second. 0 - means unlimited
-ftpUploadSpeed=7500000
+ftpUploadSpeed=0
 ftpDownloadSpeed=0
 
-verbose=0
+keepLocalCopy=1
+keepLocalBackupDays=1
+
+keepRemoteCopy=1
+keepRemoteBackupDays=2
+
+verbose=1
+
+###############################
+# do not edit below this line
+###############################
 
 dateTs=$(date +%s)
 ownScriptName=$(basename "$0" | sed -e 's/.sh$//g')
@@ -16,12 +31,8 @@ scriptLog="/var/log/$ownScriptName.log"
 nagiosLog="/var/log/$ownScriptName.nagios"
 lastRun="/var/log/$ownScriptName.last"
 
-keepLocalCopy=1
-keepLocalBackupDays=1
 localBackupDays=$(date +%Y%m%d%H%M%S -d "$keepLocalBackupDays day ago")
 
-keepRemoteCopy=1
-keepRemoteBackupDays=2
 remoteBackupDays=$(date +%Y%m%d%H%M%S -d "$keepRemoteBackupDays day ago")
 
 zimbraUser="zimbra"
@@ -33,7 +44,7 @@ zmmailboxCommand="/bin/sudo -u $zimbraUser $zimbraZmmailbox"
 curlBin="/bin/curl"
 lftpBin="/bin/lftp"
 
-localBackupDir="/mnt/backup"
+localBackupDir="/opt/backup"
 currentDate=$(date +%Y%m%d%H%M%S)
 currentBackupDir="$localBackupDir/$currentDate"
 tmpDir="$currentBackupDir/tmp"
@@ -41,6 +52,10 @@ distributinlistMembersDir="$currentBackupDir/distributinlistMembers"
 userpassDir="$currentBackupDir/userpass"
 userdataDir="$currentBackupDir/userdata"
 filtersDir="$currentBackupDir/filters"
+calendarDir="$currentBackupDir/calendars"
+contactsDir="$currentBackupDir/contacts"
+ldapDir="$currentBackupDir/ldap"
+tasksDir="$currentBackupDir/tasks"
 mailDir="$currentBackupDir/mail"
 restoreScriptsDir="$currentBackupDir/restoreScripts"
 domainsFile="$currentBackupDir/domains.txt"
@@ -172,7 +187,11 @@ createDir $distributinlistMembersDir
 createDir $userpassDir
 createDir $userdataDir
 createDir $filtersDir
+createDir $calendarDir
+createDir $contactsDir
 createDir $mailDir
+createDir $ldapDir
+createDir $tasksDir
 createDir $restoreScriptsDir
 
 logPrint "create distributinlists file $domainsFile" 0 0
@@ -215,6 +234,16 @@ done < $distributinlistFile
 
 while read email
 do
+        logPrint "get ldap for $email" 0 0
+        $zmprovCommand -l ga $email > $ldapDir/$email.ldif
+        checkStatusGetLDAP=$?
+        if [ $checkStatusGetLDAP -ne 0 ]; then
+                logPrint "ERROR could not execute $zmprovCommand -l ga $email > $ldapDir/$email.ldif" 1 0
+        fi
+done < $emailsFile
+
+while read email
+do
         logPrint "get user password for $email" 0 0
         $zmprovCommand -l ga $email userPassword | grep userPassword: | awk '{ print $2}' > $userpassDir/$email.shadow;
         checkStatusGetUserPass=$?
@@ -235,10 +264,58 @@ done < $emailsFile
 
 while read email
 do
-       logPrint "get filter for $email" 0 0
-       $zmprovCommand ga $email zimbraMailSieveScript > $tmpDir/$email
-       sed -i -e "1d" $tmpDir/$email
-       sed 's/zimbraMailSieveScript: //g' $tmpDir/$email > $filtersDir/$email
+        logPrint "get calendar in tgz for user $email" 0 0
+        $zmmailboxCommand -z -m $email getRestURL '/Calendar?fmt=tgz' > $calendarDir/$email.tgz
+        checkStatusGetCalendarTGZ=$?
+        if [ $checkStatusGetCalendarTGZ -ne 0 ]; then
+                logPrint "ERROR could not execute $zmmailboxCommand -z -m $email getRestURL /Calendar?fmt=tgz > $calendarDir/$email.tgz" 0 0
+        fi
+        logPrint "get calendar in ics for user $email" 0 0
+        $zmmailboxCommand -z -m $email getRestURL '/Calendar?fmt=ics' > $calendarDir/$email.ics
+        checkStatusGetCalendarICS=$?
+        if [ $checkStatusGetCalendarICS -ne 0 ]; then
+                logPrint "ERROR could not execute $zmmailboxCommand -z -m $email getRestURL /Calendar?fmt=ics > $calendarDir/$email.ics" 0 0
+        fi
+done < $emailsFile
+
+while read email
+do
+        logPrint "get contacts in ics for user $email" 0 0
+        $zmmailboxCommand -z -m $email getRestURL '/Contacts?fmt=csv' > $contactsDir/$email.csv
+        checkStatusGetContactsCSV=$?
+        if [ $checkStatusGetContactsCSV -ne 0 ]; then
+                logPrint "ERROR could not execute $zmmailboxCommand -z -m $email getRestURL /Calendar?fmt=csv > $calendarDir/$email.csv" 0 0
+        fi
+        logPrint "get contacts in tgz for user $email" 0 0
+        $zmmailboxCommand -z -m $email getRestURL '/Contacts?fmt=tgz' > $contactsDir/$email.tgz
+        checkStatusGetContactsTGZ=$?
+        if [ $checkStatusGetContactsTGZ -ne 0 ]; then
+                logPrint "ERROR could not execute $zmmailboxCommand -z -m $email getRestURL /Calendar?fmt=tgz > $calendarDir/$email.tgz" 0 0
+        fi
+done < $emailsFile
+
+while read email
+do
+        logPrint "get tasks in vcard for user $email" 0 0
+        $zmmailboxCommand -z -m $email getRestURL '/Tasks' > $tasksDir/$email.vcard
+        checkStatusGetTasksVCARD=$?
+        if [ $checkStatusGetTasksVCARD -ne 0 ]; then
+                logPrint "ERROR could not execute $zmmailboxCommand -z -m $email getRestURL '/Tasks' > $tasksDir/$email.vcard" 0 0
+        fi
+        logPrint "get tasks in tgz for user $email" 0 0
+        $zmmailboxCommand -z -m $email getRestURL '/Tasks?fmt=tgz' > $tasksDir/$email.tgz
+        checkStatusGetTasksTGZ=$?
+        if [ $checkStatusGetTasksTGZ -ne 0 ]; then
+                logPrint "ERROR could not execute $zmmailboxCommand -z -m $email getRestURL /Tasks?fmt=tgz > $tasksDir/$email.tgz" 0 0
+        fi
+done < $emailsFile
+
+while read email
+do
+        logPrint "get filter for $email" 0 0
+        $zmprovCommand ga $email zimbraMailSieveScript > $tmpDir/$email
+        sed -i -e "1d" $tmpDir/$email
+        sed 's/zimbraMailSieveScript: //g' $tmpDir/$email > $filtersDir/$email
 done < $emailsFile
 
 while read email
