@@ -323,7 +323,7 @@ elif [[ $measureString =~ ^t$ ]]; then
         if [ $snapshotSize -gt $sizeValueInGB ];then
                 logPrint "ERROR Incorrect snapshot size. It must be less than $sizeValue GB" 1 1
         else
-                logPrint "Snapshot size seems correct. $snapshotSize GB snapshot could be created in $sizeValue GB free space" 0 0
+                logPrint "Snapshot size seems correct. $snapshotSize GB snapshot could be created in $sizeValue TB free space" 0 0
         fi
 else
         logPrint "ERROR Something is wrong with remote free space in volume group" 1 1
