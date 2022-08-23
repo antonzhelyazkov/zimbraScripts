@@ -28,8 +28,8 @@ fi
 
 if [ -d $DST_DIR ] || [ -d $TMP_DIR ]
 then
-    echo "$(print_time) INFO RUN directory exists $item"
-    echo "$(print_time) INFO RUN directory exists $item" >> $LOG_FILE
+    echo "$(print_time) INFO RUN directory exists $DST_DIR or $TMP_DIR"
+    echo "$(print_time) INFO RUN directory exists $DST_DIR or $TMP_DIR" >> $LOG_FILE
     exit 1
 fi
 
@@ -57,6 +57,7 @@ then
     echo "$(print_time) INFO RUN dump domains" >> $LOG_FILE
 else
     echo "$(print_time) ERROR in dump domains" >> $LOG_FILE
+    exit 1
 fi
 
 if sudo -u zimbra /opt/zimbra/bin/zmprov gaaa > $TMP_DIR/admins.txt
@@ -64,6 +65,7 @@ then
     echo "$(print_time) INFO RUN dump admins" >> $LOG_FILE
 else
     echo "$(print_time) ERROR in dump admins" >> $LOG_FILE
+    exit 1
 fi
 
 if sudo -u zimbra /opt/zimbra/bin/zmprov -l gaa > $TMP_DIR/emails.txt
@@ -85,6 +87,7 @@ then
     echo "$(print_time) INFO RUN mkdir $TMP_DIR/distributinlist_members" >> $LOG_FILE
 else
     echo "$(print_time) ERROR in mkdir $TMP_DIR/distributinlist_members" >> $LOG_FILE
+    exit 1
 fi
 
 for i in `cat $TMP_DIR/distributinlist.txt`
@@ -102,6 +105,7 @@ then
     echo "$(print_time) INFO RUN mkdir $TMP_DIR/userpass" >> $LOG_FILE
 else
     echo "$(print_time) ERROR in mkdir $TMP_DIR/userpass" >> $LOG_FILE
+    exit 1
 fi
 
 for i in `cat $TMP_DIR/emails.txt`
@@ -120,6 +124,7 @@ then
     echo "$(print_time) INFO RUN mkdir $TMP_DIR/userdata" >> $LOG_FILE
 else
     echo "$(print_time) ERROR in mkdir $TMP_DIR/userdata" >> $LOG_FILE
+    exit 1
 fi
 
 for i in `cat $TMP_DIR/emails.txt`
@@ -132,9 +137,17 @@ do
     fi
 done
 
+if sudo -u zimbra mkdir -p $TMP_DIR/usermail
+then
+    echo "$(print_time) INFO RUN mkdir $TMP_DIR/usermail" >> $LOG_FILE
+else
+    echo "$(print_time) ERROR in mkdir $TMP_DIR/usermail" >> $LOG_FILE
+    exit 1
+fi
+
 for email in `cat $TMP_DIR/emails.txt`
 do  
-    if sudo -u zimbra /opt/zimbra/bin/zmmailbox -z -m $email getRestURL '/?fmt=tgz' > $email.tgz
+    if sudo -u zimbra /opt/zimbra/bin/zmmailbox -z -m $email getRestURL '/?fmt=tgz' > $TMP_DIR/usermail/$email.tgz
     then
         echo "$(print_time) INFO RUN dump email $email" >> $LOG_FILE
     else
@@ -168,6 +181,7 @@ then
     echo "$(print_time) INFO RUN mv $TMP_DIR $DST_DIR" >> $LOG_FILE
 else
     echo "$(print_time) ERROR in mv $TMP_DIR $DST_DIR" >> $LOG_FILE
+    exit 1
 fi
 
 # for i in `cat /backups/zmigrate/domains.txt `; do  zmprov cd $i zimbraAuthMech zimbra ;echo $i ;done
