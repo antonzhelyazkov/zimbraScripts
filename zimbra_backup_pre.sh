@@ -4,10 +4,6 @@
 source /opt/zimbraScripts/zimbra_backup_src.sh
 ########### VARS ###########
 
-print_time(){
-    echo $(date +"%Y-%m-%d %H:%M:%S")
-}
-
 echo "$(print_time) INFO PRE started" `id` >> $LOG_FILE
 
 if [ -f "$PID_FILE" ]
@@ -16,13 +12,6 @@ then
     exit 1
 else
     echo $$ > $PID_FILE
-fi
-
-if [ -d $TMP_DIR ]
-then
-    echo "$(print_time) INFO RUN directory exists $TMP_DIR"
-    echo "$(print_time) INFO RUN directory exists $TMP_DIR" >> $LOG_FILE
-    exit 1
 fi
 
 if [ ! -d $DST_DIR ]
