@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 ########### VARS ###########
-source /opt/zimbraScripts/zimbra_backup_src.sh
+source /usr/local/zimbraScripts/zimbra_backup_src.sh
 ########### VARS ###########
 
 echo "$(print_time) INFO PRE started" `id` >> $LOG_FILE

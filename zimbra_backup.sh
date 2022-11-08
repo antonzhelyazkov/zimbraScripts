@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 ########### VARS ###########
-source /opt/zimbraScripts/zimbra_backup_src.sh
+source /usr/local/zimbraScripts/zimbra_backup_src.sh
 ERROR_COUNT=0
 ########### VARS ###########
 
@@ -24,7 +24,7 @@ fi
 
 if [ -d $DST_DIR ]
 then
-    echo "$(print_time) INFO RUN directory exists $DST_DIR" >> $LOG_FILE
+    echo "$(print_time) ERROR directory exists $DST_DIR" >> $LOG_FILE
     exit 1
 else 
     echo "$(print_time) INFO RUN directory missing $DST_DIR" >> $LOG_FILE
